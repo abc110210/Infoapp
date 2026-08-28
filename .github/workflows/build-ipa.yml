@@ -1,0 +1,55 @@
+name: Build IPA
+
+on:
+  workflow_dispatch:          # 仓库 Actions 页面手动点击运行
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 安装 XcodeGen
+        run: brew install xcodegen
+
+      - name: 生成 Xcode 工程
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Release 构建（不签名）
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project MagicaMonitor.xcodeproj \
+            -scheme MagicaMonitor \
+            -configuration Release \
+            -derivedDataPath build \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: 打包 unsigned IPA
+        working-directory: ios
+        run: |
+          APP_PATH="build/Build/Products/Release-iphoneos/MagicaMonitor.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "!! 未找到 .app，构建失败"
+            exit 1
+          fi
+          rm -rf Payload
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          ditto -c -k --sequesterRsrc --keepParent Payload MagicaMonitor-unsigned.ipa
+          echo "IPA 生成完成:"
+          ls -lh MagicaMonitor-unsigned.ipa
+
+      - name: 上传 IPA 产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: MagicaMonitor-unsigned-ipa
+          path: ios/MagicaMonitor-unsigned.ipa
+          if-no-files-found: error
