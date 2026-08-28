@@ -165,7 +165,7 @@ struct HomeView: View {
                 HStack(spacing: 8) {
                     infoItem("主机", api.data?.system?.hostname ?? "--")
                     Divider().frame(height: 28)
-                    infoItem("系统", api.data?.system?.osName)
+                    infoItem("系统", (api.data?.system?.osName) ?? "--")
                     Divider().frame(height: 28)
                     infoItem("架构", api.data?.system?.arch ?? "--")
                 }

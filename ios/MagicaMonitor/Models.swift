@@ -140,7 +140,7 @@ struct EventsInfo: Decodable {
     let events: [EventItem]?
 }
 
-struct EventItem: Decodable {
+struct EventItem: Decodable, Hashable, Identifiable {
     let ts: Double?
     let kind: String?
     let qq: String?
@@ -152,6 +152,10 @@ struct EventItem: Decodable {
     let tier: Int?
     let mute_sec: Int?
     let warns: Int?
+
+    var id: String {
+        "\(ts ?? 0)-\(kind ?? "")-\(qq ?? "")-\(user_id ?? 0)"
+    }
 }
 
 // MARK: - 生效群

@@ -62,10 +62,11 @@ struct Pentagram: Shape {
         let radius = size / 2
         let angles: [Double] = [270, 342, 54, 126, 198] // 上顶点开始
         var points: [CGPoint] = []
+        let r = Double(radius)
         for a in angles {
             let rad = a * .pi / 180
-            points.append(CGPoint(x: center.x + cos(rad) * radius,
-                                  y: center.y + sin(rad) * radius))
+            points.append(CGPoint(x: center.x + CGFloat(cos(rad) * r),
+                                  y: center.y + CGFloat(sin(rad) * r)))
         }
         path.move(to: points[0])
         path.addLine(to: points[2])
@@ -199,8 +200,12 @@ struct RingGauge: View {
                 Circle()
                     .trim(from: 0, to: max(0.02, min(1.0, percent / 100)))
                     .stroke(
-                        AngularGradient(colors: [color.opacity(0.4), color, .white.opacity(0.9)],
-                                        center: .center, startAngle: .degrees(-90), endAngle: .degrees(270)),
+                        AngularGradient(
+                            gradient: Gradient(colors: [color.opacity(0.4), color, .white.opacity(0.9)]),
+                            center: .center,
+                            startAngle: .degrees(-90),
+                            endAngle: .degrees(270)
+                        ),
                         style: StrokeStyle(lineWidth: 8, lineCap: .round)
                     )
                     .rotationEffect(.degrees(-90))

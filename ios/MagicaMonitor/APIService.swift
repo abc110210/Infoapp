@@ -219,6 +219,8 @@ final class APIService: ObservableObject {
                     }
                 case .success(.data):
                     cont.resume(returning: (true, "已连接"))
+                case .success:
+                    cont.resume(returning: (true, "已连接"))
                 case .failure(let error):
                     cont.resume(returning: (false, error.localizedDescription))
                 }

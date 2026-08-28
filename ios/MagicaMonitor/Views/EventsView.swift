@@ -198,9 +198,4 @@ private struct KV: Identifiable {
     var id: String { key }
 }
 
-// MARK: - Identifiable/Equatable for ForEach
-extension EventItem: Identifiable, Hashable {
-    var id: String {
-        "\(ts ?? 0)-\(kind ?? "")-\(qq ?? "")-\(user_id ?? 0)"
-    }
-}
+// MARK: - 事件行（EventItem 的 id 已在 Models.swift 声明）
