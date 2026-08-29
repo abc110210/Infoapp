@@ -10,8 +10,9 @@ struct ConsoleView: View {
 
     private var lines: [String] {
         guard let ls = api.console?.lines, !ls.isEmpty else { return [] }
-        if filterText.isEmpty { return ls }
-        return ls.filter { $0.localizedCaseInsensitiveContains(filterText) }
+        // 最新日志在前（倒序显示）：旧的在下、新的在上
+        if filterText.isEmpty { return Array(ls.reversed()) }
+        return Array(ls.filter { $0.localizedCaseInsensitiveContains(filterText) }.reversed())
     }
 
     var body: some View {
@@ -163,8 +164,8 @@ struct ConsoleView: View {
             )
             .padding(.horizontal, 16)
             .padding(.top, 2)
-            // 控制台窗口高度约半屏（不再撑满到底部）
-            .frame(maxHeight: UIScreen.main.bounds.height * 0.5)
+            // 控制台窗口高度：约 40% 屏高（较紧凑）
+            .frame(maxHeight: UIScreen.main.bounds.height * 0.4)
         }
     }
 

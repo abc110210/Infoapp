@@ -11,7 +11,6 @@ struct HomeView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         hero
-                            .padding(.horizontal, -16)   // 贴边全宽，不被左右挤压
                         if api.isLoading && api.data == nil {
                             ProgressView("魔法加载中…")
                                 .tint(.magiPink)
@@ -72,10 +71,6 @@ struct HomeView: View {
                                    startPoint: .topLeading, endPoint: .bottomTrailing),
                     lineWidth: 1.2
                 )
-
-            MagicCircle(size: 120)
-                .offset(x: 100, y: -80)
-                .opacity(0.5)
 
             VStack(alignment: .leading, spacing: 12) {
                 Text("魔法观测")
