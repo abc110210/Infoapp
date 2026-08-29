@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import UIKit
 
 /// 负责与 Python 聚合服务端的 wss 长连接通信。
 /// 协议：连接后服务端周期推送 {"type":"data",...} 与心跳 {"type":"ping"}，
@@ -117,6 +118,67 @@ final class APIService: ObservableObject {
     func stopSystemAutoRefresh() {
         systemRefreshTimer?.invalidate()
         systemRefreshTimer = nil
+    }
+
+    // MARK: - 后台保持（进后台不断连，回前台立即刷新）
+
+    private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+    private var backgroundObservers: [NSObjectProtocol] = []
+
+    /// App 启动时调用一次：注册前台/后台通知
+    func setupBackgroundHandling() {
+        guard backgroundObservers.isEmpty else { return }
+        let nc = NotificationCenter.default
+        backgroundObservers.append(nc.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.appDidEnterBackground()
+        })
+        backgroundObservers.append(nc.addObserver(
+            forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.appWillEnterForeground()
+        })
+    }
+
+    private func appDidEnterBackground() {
+        // 后台暂停 3 秒高频轮询（省电），期间用后台任务维持心跳保活
+        stopSystemAutoRefresh()
+        beginBackgroundKeepAlive()
+    }
+
+    private func beginBackgroundKeepAlive() {
+        guard backgroundTask == .invalid else { return }
+        backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
+            self?.endBackgroundKeepAlive()
+        }
+        // 后台宽限窗口内每 10s 发一次 ping，保证服务端不因空闲断开
+        Task { [weak self] in
+            while let self, self.backgroundTask != .invalid, !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 10_000_000_000)
+                guard self.backgroundTask != .invalid else { break }
+                self.sendRaw(#"{"type":"ping"}"#)
+            }
+        }
+    }
+
+    private func endBackgroundKeepAlive() {
+        if backgroundTask != .invalid {
+            UIApplication.shared.endBackgroundTask(backgroundTask)
+            backgroundTask = .invalid
+        }
+    }
+
+    private func appWillEnterForeground() {
+        endBackgroundKeepAlive()
+        // 连接还在就直接拉一帧数据 + 控制台；已断开则重连
+        if wsTask != nil {
+            sendRaw(#"{"type":"refresh"}"#)
+            sendRaw(#"{"type":"console"}"#)
+        } else {
+            connect()
+        }
+        startSystemAutoRefresh()
     }
 
     // MARK: - 收发

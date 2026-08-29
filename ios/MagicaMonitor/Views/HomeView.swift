@@ -19,7 +19,6 @@ struct HomeView: View {
                         } else if let err = api.errorMessage {
                             errorCard(err)
                         } else if api.data != nil {
-                            serverCard
                             systemCard
                             overviewCard
                             banCard
@@ -87,6 +86,19 @@ struct HomeView: View {
                     )
                     .shadow(color: .magiPink.opacity(0.7), radius: 14)
 
+                // 魔法契约 · 已连接 + 小圆点（放在文字后面，大小与字号相当）
+                HStack(spacing: 8) {
+                    Text(wsText)
+                        .font(.title3.weight(.bold))
+                        .foregroundColor(.white)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Circle()
+                        .fill(wsColor)
+                        .frame(width: 10, height: 10)
+                        .shadow(color: wsColor, radius: 4)
+                        .accessibilityHidden(true)
+                }
+
                 HStack(spacing: 6) {
                     if let v = api.data?.status?.version, !v.isEmpty {
                         Pill(text: "version \(v)", color: .white)
@@ -96,46 +108,27 @@ struct HomeView: View {
                     }
                 }
 
-                // 状态光环（小巧精致）
-                HStack(spacing: 14) {
-                    ZStack {
-                        Circle()
-                            .fill(wsColor.opacity(0.25))
-                            .frame(width: 40, height: 40)
-                        Circle()
-                            .fill(wsColor)
-                            .frame(width: 22, height: 22)
-                            .shadow(color: wsColor, radius: 9)
-                        Circle()
-                            .fill(Color.white.opacity(0.7))
-                            .frame(width: 7, height: 7)
-                            .offset(x: -4.5, y: -4.5)
-                    }
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(wsText)
-                            .font(.title3.weight(.bold))
-                            .foregroundColor(.white)
-                        // 已运行 + 系统信息（两行字体显示）
-                        Text("已运行 \(humanUptime(api.data?.system?.uptime_sec)) · 服务器时间 \(api.data?.status?.time?.serverTimeShort ?? "--")")
-                            .font(MagiFont.body(15))
-                            .foregroundColor(.white.opacity(0.97))
-                        Text("系统：\(sysOSLine)")
-                            .font(MagiFont.body(14))
-                            .foregroundColor(.white.opacity(0.92))
-                        Text("主机：\(sysHostLine)")
-                            .font(MagiFont.body(14))
-                            .foregroundColor(.white.opacity(0.85))
-                    }
-                    Spacer()
-                    Text(formatTimestamp(api.data?.status?.ts))
-                        .font(.caption2.monospacedDigit())
+                VStack(alignment: .leading, spacing: 4) {
+                    // 已运行一行
+                    Text("已运行 \(humanUptime(api.data?.system?.uptime_sec))")
+                        .font(MagiFont.body(15))
+                        .foregroundColor(.white.opacity(0.97))
+                    // 服务器时间单独一行
+                    Text("服务器时间 \(api.data?.status?.time?.serverTimeShort ?? "--")")
+                        .font(MagiFont.body(14))
                         .foregroundColor(.white.opacity(0.9))
+                    Text("系统：\(sysOSLine)")
+                        .font(MagiFont.body(14))
+                        .foregroundColor(.white.opacity(0.92))
+                    Text("主机：\(sysHostLine)")
+                        .font(MagiFont.body(14))
+                        .foregroundColor(.white.opacity(0.85))
                 }
             }
             .padding(22)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(height: 268)
+        .frame(height: 250)
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
     }
 
@@ -157,22 +150,6 @@ struct HomeView: View {
     private var wsText: String {
         guard let ws = api.data?.status?.ws_connected else { return "连接中…" }
         return ws ? "魔法契约 · 已连接" : "契约已断 · 未连接"
-    }
-
-    // MARK: - 服务器信息
-    private var serverCard: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 10) {
-                sectionHeader("服务器状态", icon: "server.rack")
-                HStack(spacing: 8) {
-                    infoItem("模块", api.data?.status?.module ?? "--")
-                    Divider().frame(height: 28)
-                    infoItem("版本", api.data?.status?.version ?? "--")
-                    Divider().frame(height: 28)
-                    infoItem("服务器时间", api.data?.status?.time?.serverTimeShort ?? "--")
-                }
-            }
-        }
     }
 
     // MARK: - 服务器系统（三环仪表卡片，无小卡）
@@ -377,20 +354,6 @@ struct HomeView: View {
                 }
             }
         }
-    }
-
-    private func infoItem(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title)
-                .font(.caption2)
-                .foregroundColor(.magiGray)
-            Text(value)
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func sectionHeader(_ title: String, icon: String) -> some View {
