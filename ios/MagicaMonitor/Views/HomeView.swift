@@ -56,6 +56,11 @@ struct HomeView: View {
                         startPoint: .topLeading, endPoint: .bottomTrailing
                     )
                 )
+                // 左右暗色渐变：背景图不再"挤满"两侧，自然融入
+                .overlay(
+                    LinearGradient(colors: [Color.black.opacity(0.55), .clear, .clear, Color.black.opacity(0.55)],
+                                   startPoint: .leading, endPoint: .trailing)
+                )
 
             // 底部柔光提升层次
             RadialGlow(color: .magiPink, radius: 150)
@@ -91,20 +96,20 @@ struct HomeView: View {
                     }
                 }
 
-                // 状态光环
+                // 状态光环（小巧精致）
                 HStack(spacing: 14) {
                     ZStack {
                         Circle()
                             .fill(wsColor.opacity(0.25))
-                            .frame(width: 54, height: 54)
+                            .frame(width: 40, height: 40)
                         Circle()
                             .fill(wsColor)
-                            .frame(width: 30, height: 30)
-                            .shadow(color: wsColor, radius: 12)
+                            .frame(width: 22, height: 22)
+                            .shadow(color: wsColor, radius: 9)
                         Circle()
                             .fill(Color.white.opacity(0.7))
-                            .frame(width: 10, height: 10)
-                            .offset(x: -6, y: -6)
+                            .frame(width: 7, height: 7)
+                            .offset(x: -4.5, y: -4.5)
                     }
                     VStack(alignment: .leading, spacing: 4) {
                         Text(wsText)
@@ -174,11 +179,13 @@ struct HomeView: View {
     private var systemCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
-                ZStack {
-                    RadialGlow(color: .magiPurple, radius: 100)
-                        .offset(x: 150, y: -60)
-                    GradientSectionTitle(text: "服务器系统", icon: "desktopcomputer")
-                }
+                // 标题 + 右上柔光（overlay 不撑开布局，标题不再被光晕顶出大片空白）
+                GradientSectionTitle(text: "服务器系统", icon: "desktopcomputer")
+                    .overlay(alignment: .trailing) {
+                        RadialGlow(color: .magiPurple, radius: 56)
+                            .offset(x: 10, y: -6)
+                            .opacity(0.8)
+                    }
 
                 // 三环仪表：CPU / 内存 / 磁盘
                 if let sys = api.data?.system {

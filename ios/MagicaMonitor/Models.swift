@@ -216,7 +216,6 @@ struct ANSISegment {
 /// 把带 ANSI 24-bit 颜色的控制台行解析成带色文本段。
 /// 支持 `\x1b[38;2;R;G;Bm` 前景色、`\x1b[1m` 加粗、`\x1b[0m` 复位。
 func parseANSI(_ raw: String) -> [ANSISegment] {
-    let esc = "\u{1B}["
     var segments: [ANSISegment] = []
     var current: Color = .white.opacity(0.85)
     var currentBold = false

@@ -6,6 +6,7 @@ struct ConsoleView: View {
     @State private var autoRefresh = true
     @State private var filterText = ""
     @State private var timer: Timer?
+    @FocusState private var filterFocused: Bool
 
     private var lines: [String] {
         guard let ls = api.console?.lines, !ls.isEmpty else { return [] }
@@ -16,22 +17,30 @@ struct ConsoleView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                StardustBackground(imageName: "page_bg")
+                    StardustBackground(imageName: "page_bg")
 
-                VStack(spacing: 0) {
-                    headerBar
+                    VStack(spacing: 0) {
+                        headerBar
 
-                    if api.console?.lines?.isEmpty != false && api.console == nil {
-                        EmptyState(icon: "terminal", text: "等待控制台数据…")
-                            .frame(maxHeight: .infinity)
-                    } else if lines.isEmpty {
-                        EmptyState(icon: "doc.text.magnifyingglass", text: "没有匹配的日志行")
-                            .frame(maxHeight: .infinity)
-                    } else {
-                        consoleBody
+                        if api.console?.lines?.isEmpty != false && api.console == nil {
+                            EmptyState(icon: "terminal", text: "等待控制台数据…")
+                                .frame(maxHeight: .infinity)
+                        } else if lines.isEmpty {
+                            EmptyState(icon: "doc.text.magnifyingglass",
+                                       text: filterText.isEmpty
+                                           ? "控制台暂无日志（请确认服务器 chaxun.log 有内容）"
+                                           : "没有匹配的日志行：\(filterText)")
+                                .frame(maxHeight: .infinity)
+                        } else {
+                            consoleBody
+                        }
                     }
                 }
-            }
+                // 点击输入框以外的空白处收起键盘（TextField 内部点击不会受影响）
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    filterFocused = false
+                }
             .navigationTitle("远程控制台")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -96,6 +105,7 @@ struct ConsoleView: View {
                         .font(.caption)
                         .textFieldStyle(.plain)
                         .autocorrectionDisabled()
+                        .focused($filterFocused)
                     if !filterText.isEmpty {
                         Button {
                             filterText = ""
@@ -153,6 +163,8 @@ struct ConsoleView: View {
             )
             .padding(.horizontal, 16)
             .padding(.top, 2)
+            // 控制台窗口高度约半屏（不再撑满到底部）
+            .frame(maxHeight: UIScreen.main.bounds.height * 0.5)
         }
     }
 
