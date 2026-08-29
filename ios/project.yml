@@ -40,6 +40,12 @@ targets:
         UIUserInterfaceStyle: Dark
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
+        UIAppFonts:
+          - YSHaoShenTi-2.ttf
+          - fzrzExtraBold.ttf
+          - syht.otf
+          - sarasa-mono-sc-bold.ttf
+          - gorga.otf
 schemes:
   MagicaMonitor:
     build:
