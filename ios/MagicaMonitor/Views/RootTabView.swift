@@ -14,9 +14,9 @@ struct RootTabView: View {
                 .tabItem {
                     Label("统计", systemImage: "chart.bar.fill")
                 }
-            EventsView()
+            ConsoleView()
                 .tabItem {
-                    Label("事件", systemImage: "bolt.fill")
+                    Label("控制台", systemImage: "terminal.fill")
                 }
             GroupsView()
                 .tabItem {
@@ -41,6 +41,7 @@ struct RootTabView: View {
         }
         .task {
             api.connect()
+            api.startSystemAutoRefresh()   // CPU/内存/磁盘等系统信息 3 秒实时
         }
     }
 }

@@ -11,6 +11,7 @@ struct HomeView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         hero
+                            .padding(.horizontal, -16)   // 贴边全宽，不被左右挤压
                         if api.isLoading && api.data == nil {
                             ProgressView("魔法加载中…")
                                 .tint(.magiPink)
@@ -43,8 +44,8 @@ struct HomeView: View {
     // MARK: - Hero
     private var hero: some View {
         ZStack {
-            // 魔法少女氛围背景：AI 生成的魔法圆环天空（暗化处理）
-            Image("hero_sky")
+            // 魔法少女氛围背景：横向魔法天空（圆环在右，左侧留白适合正文）
+            Image("hero_banner")
                 .resizable()
                 .scaledToFill()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -68,13 +69,13 @@ struct HomeView: View {
                     lineWidth: 1.2
                 )
 
-            MagicCircle(size: 160)
-                .offset(x: 120, y: -90)
-                .opacity(0.6)
+            MagicCircle(size: 120)
+                .offset(x: 100, y: -80)
+                .opacity(0.5)
 
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("魔法观测")
-                    .font(.system(size: 34, weight: .heavy, design: .rounded))
+                    .font(MagiFont.title(34))
                     .foregroundStyle(
                         LinearGradient(colors: [.white, Color.magiPink, Color(red: 1.0, green: 0.85, blue: 0.95)],
                                        startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -105,12 +106,19 @@ struct HomeView: View {
                             .frame(width: 10, height: 10)
                             .offset(x: -6, y: -6)
                     }
-                    VStack(alignment: .leading, spacing: 3) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(wsText)
                             .font(.title3.weight(.bold))
                             .foregroundColor(.white)
-                        Text("已运行 \(humanUptime(api.data?.status?.uptime_sec))")
-                            .font(.footnote)
+                        // 已运行 + 系统信息（两行字体显示）
+                        Text("已运行 \(humanUptime(api.data?.system?.uptime_sec)) · 服务器时间 \(api.data?.status?.time?.serverTimeShort ?? "--")")
+                            .font(MagiFont.body(15))
+                            .foregroundColor(.white.opacity(0.97))
+                        Text("系统：\(sysOSLine)")
+                            .font(MagiFont.body(14))
+                            .foregroundColor(.white.opacity(0.92))
+                        Text("主机：\(sysHostLine)")
+                            .font(MagiFont.body(14))
                             .foregroundColor(.white.opacity(0.85))
                     }
                     Spacer()
@@ -122,8 +130,19 @@ struct HomeView: View {
             .padding(22)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(height: 250)
+        .frame(height: 268)
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+    }
+
+    /// 系统信息第一行：系统 · 架构
+    private var sysOSLine: String {
+        guard let s = api.data?.system else { return "加载中…" }
+        return "\(s.osName) · \(s.arch ?? "?")"
+    }
+
+    /// 系统信息第二行：主机名
+    private var sysHostLine: String {
+        api.data?.system?.hostname ?? "?"
     }
 
     private var wsColor: Color {
@@ -151,7 +170,7 @@ struct HomeView: View {
         }
     }
 
-    // MARK: - 服务器系统（三环仪表卡片）
+    // MARK: - 服务器系统（三环仪表卡片，无小卡）
     private var systemCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
@@ -159,15 +178,6 @@ struct HomeView: View {
                     RadialGlow(color: .magiPurple, radius: 100)
                         .offset(x: 150, y: -60)
                     GradientSectionTitle(text: "服务器系统", icon: "desktopcomputer")
-                }
-
-                // 主机 / 系统 / 架构 / 开机时长 一行
-                HStack(spacing: 8) {
-                    infoItem("主机", api.data?.system?.hostname ?? "--")
-                    Divider().frame(height: 28)
-                    infoItem("系统", (api.data?.system?.osName) ?? "--")
-                    Divider().frame(height: 28)
-                    infoItem("架构", api.data?.system?.arch ?? "--")
                 }
 
                 // 三环仪表：CPU / 内存 / 磁盘
@@ -188,21 +198,21 @@ struct HomeView: View {
                     }
                     .padding(.top, 2)
 
-                    // 运行时长 + 主频 徽标行
+                    // 主机名 + 主频（字体小字，配合 hero 已显示的系统/运行时间）
                     HStack(spacing: 8) {
-                        Label("运行 \(humanUptime(sys.uptime_sec))", systemImage: "clock.fill")
+                        Image(systemName: "desktopcomputer")
                             .font(.caption2)
-                            .foregroundColor(.magiGold)
-                            .padding(.horizontal, 10).padding(.vertical, 5)
-                            .background(Capsule().fill(Color.magiGold.opacity(0.12)))
-                        if let f = sys.cpu_freq_mhz {
-                            Label("\(Int(f)) MHz", systemImage: "speedometer")
-                                .font(.caption2)
-                                .foregroundColor(.magiSky)
-                                .padding(.horizontal, 10).padding(.vertical, 5)
-                                .background(Capsule().fill(Color.magiSky.opacity(0.12)))
-                        }
+                            .foregroundColor(.magiGray)
+                        Text(sys.hostname ?? "--")
+                            .font(MagiFont.body(10))
+                            .foregroundColor(.white.opacity(0.65))
+                            .lineLimit(1)
                         Spacer()
+                        if let f = sys.cpu_freq_mhz {
+                            Text("CPU \(Int(f)) MHz")
+                                .font(MagiFont.num(10))
+                                .foregroundColor(.magiSky)
+                        }
                     }
                 } else {
                     Text("暂无数据")
@@ -236,17 +246,10 @@ struct HomeView: View {
                         StatTile(title: "封号查询",
                                  value: "\(o.ban_query_today ?? 0)",
                                  color: .magiPurple, icon: "shield.lefthalf.filled")
-                        StatTile(title: "今日事件",
-                                 value: "\(o.events_today ?? 0)",
-                                 color: .magiGold, icon: "bolt.fill")
                         StatTile(title: "网站库黑名单",
                                  value: "\(o.web_blacklist_count ?? 0)",
                                  color: .magiSky, icon: "nosign")
                     }
-                }
-                // 事件类型分解
-                if let kinds = api.data?.overview?.events_today_by_kind, !kinds.isEmpty {
-                    eventKindRow(kinds)
                 }
                 // 付费 token 状态
                 if let ban = api.data?.ban {
@@ -385,26 +388,6 @@ struct HomeView: View {
 
     private func sectionHeader(_ title: String, icon: String) -> some View {
         GradientSectionTitle(text: title, icon: icon)
-    }
-
-    private func eventKindRow(_ kinds: [String: Int]) -> some View {
-        let rows = kinds.sorted { $0.value > $1.value }.map { PVRow(name: $0.key, count: $0.value) }
-        return HStack(spacing: 8) {
-            ForEach(rows) { item in
-                let style = EventKindStyle.from(item.name)
-                HStack(spacing: 4) {
-                    Image(systemName: style.systemImage)
-                        .font(.caption2)
-                    Text("\(item.count)")
-                        .font(.caption.weight(.bold))
-                        .monospacedDigit()
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Capsule().fill(style.color.opacity(0.25)))
-            }
-        }
     }
 
     private func errorCard(_ msg: String) -> some View {

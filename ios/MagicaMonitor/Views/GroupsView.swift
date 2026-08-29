@@ -42,23 +42,34 @@ struct GroupsView: View {
     // MARK: - 生效群
     private func groupCard(_ groups: [GroupItem]) -> some View {
         GlassCard {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 16) {
                 sectionHeader("生效群 (\(groups.count))", icon: "person.3.fill")
                 let sorted = groups.sorted { ($0.call_total ?? 0) > ($1.call_total ?? 0) }
                 let maxV = sorted.first?.call_total ?? 1
                 ForEach(sorted, id: \.group_id) { g in
-                    VStack(spacing: 6) {
-                        HStack {
-                            Text("群 \(g.group_id.map { "\($0)" } ?? "--")")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(.white)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 10) {
+                            // 生效群魔法图标
+                            MagicIcon(image: "ic_group", size: 26)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(g.displayName)
+                                    .font(MagiFont.body(15))
+                                    .foregroundColor(.white)
+                                    .lineLimit(1)
+                                Text("群号 \(g.group_id.map { "\($0)" } ?? "--")")
+                                    .font(MagiFont.num(10))
+                                    .foregroundColor(.magiGray)
+                                    .lineLimit(1)
+                            }
                             Spacer()
-                            Text("今日 \(g.call_today ?? 0)")
-                                .font(.caption.weight(.bold))
-                                .foregroundColor(.magiPink)
-                            Text("累计 \(g.call_total ?? 0)")
-                                .font(.caption.monospacedDigit())
-                                .foregroundColor(.magiGray)
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text("今日 \(g.call_today ?? 0)")
+                                    .font(MagiFont.card(12))
+                                    .foregroundColor(.magiPink)
+                                Text("累计 \(g.call_total ?? 0)")
+                                    .font(MagiFont.num(10))
+                                    .foregroundColor(.magiGray)
+                            }
                         }
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
@@ -69,8 +80,17 @@ struct GroupsView: View {
                                     .frame(width: max(8, geo.size.width * CGFloat(g.call_total ?? 0) / CGFloat(max(1, maxV))))
                             }
                         }
-                        .frame(height: 6)
+                        .frame(height: 7)
                     }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Color.white.opacity(0.05))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                            )
+                    )
                 }
             }
         }
@@ -93,7 +113,7 @@ struct GroupsView: View {
                          value: "\(bl.keyword_fuzzy_mute_count ?? 0)",
                          color: .magiPurple, icon: "bell.badge.fill")
                 if let sample = bl.web_blacklist_sample, !sample.isEmpty {
-                    Text("样本号码")
+                    Text("网站骗子库样本")
                         .font(.caption)
                         .foregroundColor(.magiGray)
                     FlowChips(items: Array(sample.prefix(10)))
@@ -117,35 +137,51 @@ struct GroupsView: View {
         }
     }
 
-    // MARK: - 邀请统计
+    // MARK: - 群邀请统计（v3：按群统计邀请人数）
     private func inviteCard(_ inv: InvitesInfo) -> some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                sectionHeader("邀请统计", icon: "person.crop.circle.badge.plus")
-                Text("累计邀请 \(inv.count ?? 0) 人")
-                    .font(.title3.weight(.bold))
+                sectionHeader("群邀请统计", icon: "person.crop.circle.badge.plus")
+                Text("累计邀请 \(inv.total ?? 0) 人")
+                    .font(MagiFont.card(16))
                     .foregroundColor(.magiGreen)
-                if let recent = inv.recent, !recent.isEmpty {
-                    ForEach(recent, id: \.time) { item in
-                        HStack(spacing: 8) {
-                            Image(systemName: "arrow.right.circle.fill")
-                                .font(.subheadline)
-                                .foregroundColor(.magiGreen)
-                            Text("\(item.inviter ?? "--") 邀请 \(item.invitee ?? "--")")
-                                .font(.footnote)
-                                .foregroundColor(.white.opacity(0.85))
+                let rows = inv.sortedGroups
+                let maxV = max(1, rows.map(\.count).max() ?? 1)
+                ForEach(rows) { row in
+                    let name = groupName(for: row.name) ?? "群 \(row.name)"
+                    VStack(spacing: 5) {
+                        HStack(spacing: 10) {
+                            // 群邀请魔法图标
+                            MagicIcon(image: "ic_invite", size: 22)
+                            Text(name)
+                                .font(MagiFont.body(13))
+                                .foregroundColor(.white.opacity(0.92))
                                 .lineLimit(1)
                             Spacer()
-                            Text(formatTimestamp(item.time))
-                                .font(.caption2.monospacedDigit())
-                                .foregroundColor(.magiGray)
+                            Text("\(row.count) 人")
+                                .font(MagiFont.num(12))
+                                .foregroundColor(.magiGreen)
                         }
-                        .padding(.vertical, 4)
-                        Divider().overlay(Color.white.opacity(0.06))
+                        GeometryReader { geo in
+                            ZStack(alignment: .leading) {
+                                Capsule().fill(Color.white.opacity(0.08))
+                                Capsule()
+                                    .fill(LinearGradient(colors: [Color.magiGreen.opacity(0.6), Color.magiGreen],
+                                                         startPoint: .leading, endPoint: .trailing))
+                                    .frame(width: max(6, geo.size.width * CGFloat(row.count) / CGFloat(maxV)))
+                            }
+                        }
+                        .frame(height: 6)
                     }
+                    .padding(.vertical, 2)
                 }
             }
         }
+    }
+
+    /// 群号 -> 群名
+    private func groupName(for id: String) -> String? {
+        api.data?.groups?.groups?.first(where: { "\($0.group_id ?? 0)" == id })?.group_name
     }
 
     private func sectionHeader(_ title: String, icon: String) -> some View {

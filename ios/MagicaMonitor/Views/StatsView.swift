@@ -18,8 +18,12 @@ struct StatsView: View {
                                          rows: types, color: .magiPurple)
                             }
                             if let groups = api.data?.call_stats?.sortedGroups, !groups.isEmpty {
+                                // 群排行：把群号显示成群名（有名字用名字）
+                                let named = groups.map { row in
+                                    PVRow(name: groupName(for: row.name) ?? row.name, count: row.count)
+                                }
                                 rankCard(title: "群排行", icon: "person.3.fill",
-                                         rows: groups, color: .magiSky)
+                                         rows: named, color: .magiSky, image: "ic_rank")
                             }
                         } else if let err = api.errorMessage {
                             errorCard(err)
@@ -106,7 +110,7 @@ struct StatsView: View {
     }
 
     // MARK: - 排行卡
-    private func rankCard(title: String, icon: String, rows: [PVRow], color: Color) -> some View {
+    private func rankCard(title: String, icon: String, rows: [PVRow], color: Color, image: String? = nil) -> some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
                 sectionHeader(title, icon: icon)
@@ -115,7 +119,8 @@ struct StatsView: View {
                     RankRow(name: row.name,
                             value: row.count,
                             maxValue: maxV,
-                            color: color)
+                            color: color,
+                            image: image)
                 }
             }
         }
@@ -127,5 +132,10 @@ struct StatsView: View {
 
     private func errorCard(_ msg: String) -> some View {
         EmptyState(icon: "exclamationmark.triangle", text: msg)
+    }
+
+    /// 群号 -> 群名（用 groups 段的 group_name）
+    private func groupName(for id: String) -> String? {
+        api.data?.groups?.groups?.first(where: { "\($0.group_id ?? 0)" == id })?.group_name
     }
 }
