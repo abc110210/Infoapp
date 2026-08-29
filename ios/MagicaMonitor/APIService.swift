@@ -16,6 +16,8 @@ final class APIService: ObservableObject {
     }
 
     @Published var data: BotInfo?
+    @Published var console: ConsoleInfo?
+    @Published var consoleUpdatedAt: Date?
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var lastUpdated: Date?
@@ -24,6 +26,7 @@ final class APIService: ObservableObject {
     private var wsTask: URLSessionWebSocketTask?
     private var reconnectTask: Task<Void, Never>?
     private var watchdogTask: Task<Void, Never>?
+    private var systemRefreshTimer: Timer?
     private var receiveActive = false
     private var reconnectAttempts = 0
     private var lastMessageAt = Date()
@@ -93,6 +96,29 @@ final class APIService: ObservableObject {
         sendRaw(#"{"type":"refresh"}"#)
     }
 
+    /// 主动拉取一帧控制台（实时，服务端 3 秒缓存）
+    func refreshConsole() {
+        sendRaw(#"{"type":"console"}"#)
+    }
+
+    // MARK: - 系统信息 3 秒实时
+
+    /// 启动系统信息实时轮询：每 3 秒发一次 refresh，
+    /// 服务端对整帧数据走缓存、系统字段（CPU/内存/磁盘）实时重采样，开销极小。
+    func startSystemAutoRefresh(interval: TimeInterval = 3) {
+        stopSystemAutoRefresh()
+        let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
+            self?.sendRaw(#"{"type":"refresh"}"#)
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        systemRefreshTimer = timer
+    }
+
+    func stopSystemAutoRefresh() {
+        systemRefreshTimer?.invalidate()
+        systemRefreshTimer = nil
+    }
+
     // MARK: - 收发
 
     private func receiveLoop() {
@@ -137,6 +163,15 @@ final class APIService: ObservableObject {
                     isLoading = false
                     errorMessage = nil
                     connectionState = .connected
+                }
+            case "console_data":
+                if let raw = obj["data"] as? [String: Any],
+                   let info = try? JSONDecoder().decode(
+                       ConsoleInfo.self,
+                       from: JSONSerialization.data(withJSONObject: raw)
+                   ) {
+                    console = info
+                    consoleUpdatedAt = Date()
                 }
             case "ping":
                 sendRaw(#"{"type":"pong"}"#)

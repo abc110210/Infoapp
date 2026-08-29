@@ -16,11 +16,11 @@ struct BotInfo: Decodable {
     let call_stats: CallStatsInfo?
     let ban: BanInfo?
     let ban_stats: BanStatsInfo?
-    let events: EventsInfo?
     let groups: GroupsInfo?
     let blacklist: BlacklistInfo?
     let ipblacklist: IPBlacklistInfo?
     let invites: InvitesInfo?
+    let console: ConsoleInfo?
     let system: SystemInfo?
 }
 
@@ -40,8 +40,6 @@ struct OverviewInfo: Decodable {
     let call_today: Int?
     let ban_query_today: Int?
     let paid_enabled: Bool?
-    let events_today: Int?
-    let events_today_by_kind: [String: Int]?
     let web_blacklist_count: Int?
     let ip_blacklisted: Int?
 }
@@ -61,9 +59,10 @@ struct CallStatsInfo: Decodable {
     let group_totals: [String: Int]?
     let trend_7d: [TrendItem]?
 
-    /// 按调用量降序排列的指令类型
+    /// 按调用量降序排列的指令类型（排除内部模块 group_blacklist）
     var sortedTypes: [PVRow] {
-        (type_totals ?? [:]).sorted { $0.value > $1.value }
+        (type_totals ?? [:]).filter { $0.key != "group_blacklist" }
+            .sorted { $0.value > $1.value }
             .map { PVRow(name: typeDisplayName($0.key), count: $0.value) }
     }
 
@@ -134,28 +133,13 @@ struct BanStatsInfo: Decodable {
     }
 }
 
-// MARK: - 事件流
-struct EventsInfo: Decodable {
+// MARK: - 控制台（带 ANSI 颜色的日志，来自上游 /info/console）
+struct ConsoleInfo: Decodable {
     let count: Int?
-    let events: [EventItem]?
-}
-
-struct EventItem: Decodable, Hashable, Identifiable {
-    let ts: Double?
-    let kind: String?
-    let qq: String?
-    let group_id: Int64?
-    let user_id: Int64?
-    let operator_id: Int64?
-    let action: String?
-    let ordinal: Int?
-    let tier: Int?
-    let mute_sec: Int?
-    let warns: Int?
-
-    var id: String {
-        "\(ts ?? 0)-\(kind ?? "")-\(qq ?? "")-\(user_id ?? 0)"
-    }
+    let lines: [String]?
+    let file: String?
+    let level: String?
+    let total_lines: Int?
 }
 
 // MARK: - 生效群
@@ -167,10 +151,17 @@ struct GroupsInfo: Decodable {
 
 struct GroupItem: Decodable {
     let group_id: Int64?
+    let group_name: String?
     let call_total: Int?
     let call_today: Int?
     let keyword_recall_groups: [Int64]?
     let fuzzy_groups: [Int64]?
+
+    /// 显示名：优先群名，无则群号
+    var displayName: String {
+        if let n = group_name, !n.isEmpty { return n }
+        return group_id.map { "\($0)" } ?? "--"
+    }
 }
 
 // MARK: - 黑名单
@@ -188,68 +179,18 @@ struct IPBlacklistInfo: Decodable {
     let ips: [String]?
 }
 
-// MARK: - 邀请统计
+// MARK: - 群邀请统计（v3 简化：按群统计人数）
 struct InvitesInfo: Decodable {
-    let count: Int?
-    let recent: [InviteItem]?
-}
+    let total: Int?
+    let per_group: [String: Int]?
 
-struct InviteItem: Decodable {
-    let group_id: String?
-    let inviter: String?
-    let invitee: String?
-    let time: Double?
+    var sortedGroups: [PVRow] {
+        (per_group ?? [:]).sorted { $0.value > $1.value }
+            .map { PVRow(name: $0.key, count: $0.value) }
+    }
 }
 
 // MARK: - 展示辅助
-
-enum EventKindStyle {
-    case banBlock, banQuery, punish, join, leave, other
-
-    static func from(_ kind: String?) -> EventKindStyle {
-        switch kind {
-        case "ban_block": return .banBlock
-        case "ban_query": return .banQuery
-        case "punish": return .punish
-        case "member_join": return .join
-        case "member_leave": return .leave
-        default: return .other
-        }
-    }
-
-    var label: String {
-        switch self {
-        case .banBlock: return "骗子拦截"
-        case .banQuery: return "封号查询"
-        case .punish: return "关键词处罚"
-        case .join: return "成员入群"
-        case .leave: return "成员退群"
-        case .other: return "未知事件"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .banBlock: return "shield.lefthalf.filled"
-        case .banQuery: return "magnifyingglass"
-        case .punish: return "exclamationmark.triangle"
-        case .join: return "sparkles"
-        case .leave: return "person.crop.circle.badge.minus"
-        case .other: return "questionmark.circle"
-        }
-    }
-
-    var color: Color {
-        switch self {
-        case .banBlock: return .magiPink
-        case .banQuery: return .magiSky
-        case .punish: return .magiGold
-        case .join: return .magiGreen
-        case .leave: return .magiPurple
-        case .other: return .magiGray
-        }
-    }
-}
 
 extension String {
     /// "2026-08-29 02:41:11" -> 只留时间 HH:mm
@@ -263,6 +204,97 @@ extension String {
         guard count >= 10 else { return self }
         return String(prefix(10))
     }
+}
+
+// MARK: - ANSI 颜色解析（控制台日志）
+struct ANSISegment {
+    let text: String
+    let color: Color
+    let bold: Bool
+}
+
+/// 把带 ANSI 24-bit 颜色的控制台行解析成带色文本段。
+/// 支持 `\x1b[38;2;R;G;Bm` 前景色、`\x1b[1m` 加粗、`\x1b[0m` 复位。
+func parseANSI(_ raw: String) -> [ANSISegment] {
+    let esc = "\u{1B}["
+    var segments: [ANSISegment] = []
+    var current: Color = .white.opacity(0.85)
+    var currentBold = false
+    var buf = ""
+    var i = raw.startIndex
+    let end = raw.endIndex
+
+    func flush() {
+        if !buf.isEmpty {
+            segments.append(ANSISegment(text: buf, color: current, bold: currentBold))
+            buf = ""
+        }
+    }
+
+    while i < end {
+        // 找 ESC 序列
+        if raw[i] == "\u{1B}" {
+            let rest = raw[i...]
+            guard rest.hasPrefix("\u{1B}[") else {
+                buf.append(raw[i]); i = raw.index(after: i); continue
+            }
+            // 提取到 m 为止
+            let afterEsc = rest.dropFirst(2)
+            if let mIdx = afterEsc.firstIndex(of: "m") {
+                let codeStr = String(afterEsc[..<mIdx])
+                flush()
+                applyANSI(codeStr, current: &current, bold: &currentBold)
+                i = afterEsc.index(after: mIdx)
+                continue
+            }
+        }
+        buf.append(raw[i])
+        i = raw.index(after: i)
+    }
+    flush()
+    return segments
+}
+
+private func applyANSI(_ codeStr: String, current: inout Color, bold: inout Bool) {
+    let parts = codeStr.split(separator: ";").compactMap { Int($0) }
+    if parts.isEmpty {
+        bold = false
+        current = .white.opacity(0.85)
+        return
+    }
+    // 查找 38;2;R;G;B 序列
+    var idx = 0
+    while idx < parts.count {
+        if parts[idx] == 1 { bold = true; idx += 1; continue }
+        if parts[idx] == 22 { bold = false; idx += 1; continue }
+        if parts[idx] == 0 { bold = false; current = .white.opacity(0.85); idx += 1; continue }
+        if parts[idx] == 38, idx + 3 < parts.count, parts[idx + 1] == 2 {
+            // 24-bit RGB 前景色
+            let r = min(255, max(0, parts[idx + 2]))
+            let g = min(255, max(0, parts[idx + 3]))
+            let b = min(255, max(0, parts[idx + 4]))
+            current = Color(red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255)
+            idx += 5
+            continue
+        }
+        idx += 1
+    }
+}
+
+/// 把解析出的片段拼成 SwiftUI Text（保留各段颜色/加粗）
+func ansiText(_ raw: String, font: Font = .system(size: 11, weight: .regular, design: .monospaced)) -> Text {
+    let segs = parseANSI(raw)
+    if segs.isEmpty {
+        return Text(raw).font(font)
+    }
+    var result = Text("")
+    for seg in segs {
+        var t = Text(seg.text).font(font)
+        if seg.bold { t = t.bold() }
+        t = t.foregroundColor(seg.color)
+        result = result + t
+    }
+    return result
 }
 
 func humanUptime(_ seconds: Double?) -> String {

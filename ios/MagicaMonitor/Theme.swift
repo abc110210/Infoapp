@@ -1,5 +1,42 @@
 import SwiftUI
 
+// MARK: - 自定义字体（已在 Info.plist UIAppFonts 注册）
+enum MagiFont {
+    /// 大标题：幼圆少神体
+    static func title(_ size: CGFloat) -> Font {
+        Font.custom("YOUSHEhaoshenti", size: size)
+    }
+    /// 卡片小标题：方正锐正黑简体 ExtraBold（粗体清晰）
+    static func card(_ size: CGFloat) -> Font {
+        Font.custom("FZRuiZhengHeiS", size: size)
+    }
+    /// 正文：思源黑体 Medium
+    static func body(_ size: CGFloat) -> Font {
+        Font.custom("Source Han Sans CN Medium", size: size)
+    }
+    /// 数字/等宽：更纱黑体 Bold
+    static func num(_ size: CGFloat) -> Font {
+        Font.custom("Sarasa-Mono-SC-Bold", size: size)
+    }
+    /// 英文点缀：Gorga
+    static func en(_ size: CGFloat) -> Font {
+        Font.custom("Gorga", size: size)
+    }
+}
+
+// MARK: - 魔法图标（透明贴纸图标，直接展示，无底无框）
+struct MagicIcon: View {
+    let image: String
+    var size: CGFloat = 22
+
+    var body: some View {
+        Image(image)
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
+    }
+}
+
 // MARK: - 魔法少女主题色
 extension Color {
     static let magiBgTop = Color(red: 0.10, green: 0.06, blue: 0.20)      // 深紫黑
@@ -143,28 +180,28 @@ struct GlassCard<Content: View>: View {
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
+                // 半透明深色底 + 顶部高光 + 渐变描边 + 柔和投影
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(Color.white.opacity(0.06))
+                    .fill(Color(red: 0.10, green: 0.06, blue: 0.18).opacity(0.82))
                     .overlay(
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .fill(
                                 LinearGradient(
-                                    colors: [Color.white.opacity(0.10), Color.white.opacity(0.02)],
+                                    colors: [Color.white.opacity(0.14), Color.white.opacity(0.03)],
                                     startPoint: .topLeading, endPoint: .bottomTrailing
                                 )
                             )
                     )
                     .overlay(
-                        // 渐变描边：粉 → 紫 → 半透明
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .stroke(
-                                LinearGradient(colors: [glow.opacity(0.55), Color.magiPurple.opacity(0.35), Color.white.opacity(0.08)],
+                                LinearGradient(colors: [glow.opacity(0.65), Color.magiPurple.opacity(0.40), Color.white.opacity(0.12)],
                                                startPoint: .topLeading, endPoint: .bottomTrailing),
                                 lineWidth: 1.1
                             )
                     )
-                    .shadow(color: glow.opacity(0.18), radius: 12, x: 0, y: 4)
-                    .shadow(color: Color.magiPurple.opacity(0.10), radius: 22, x: 0, y: 0)
+                    .shadow(color: .black.opacity(0.45), radius: 10, x: 0, y: 4)
+                    .shadow(color: glow.opacity(0.12), radius: 18, x: 0, y: 0)
             )
     }
 }
@@ -214,7 +251,7 @@ struct RingGauge: View {
                         .font(.system(size: 15))
                         .foregroundColor(color)
                     Text("\(Int(percent))%")
-                        .font(.system(size: 16, weight: .heavy, design: .rounded))
+                        .font(MagiFont.num(15))
                         .foregroundColor(.white)
                 }
             }
@@ -243,7 +280,7 @@ struct GradientSectionTitle: View {
                 .font(.subheadline)
                 .foregroundColor(.magiPink)
             Text(text)
-                .font(.headline)
+                .font(MagiFont.card(15))
                 .foregroundStyle(
                     LinearGradient(colors: [Color.magiPink, Color(red: 0.85, green: 0.72, blue: 1.0)],
                                    startPoint: .leading, endPoint: .trailing)
@@ -267,12 +304,12 @@ struct StatTile: View {
                     .font(.caption)
                     .foregroundColor(color)
                 Text(title)
-                    .font(.caption)
+                    .font(MagiFont.body(10))
                     .foregroundColor(.magiGray)
                 Spacer(minLength: 0)
             }
             Text(value)
-                .font(.system(size: 24, weight: .heavy, design: .rounded))
+                .font(MagiFont.num(22))
                 .foregroundColor(color)
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
@@ -292,10 +329,14 @@ struct RankRow: View {
     let value: Int
     let maxValue: Int
     let color: Color
+    var image: String? = nil
 
     var body: some View {
         VStack(spacing: 4) {
             HStack {
+                if let img = image {
+                    MagicIcon(image: img, size: 22)
+                }
                 Text(name)
                     .font(.subheadline)
                     .foregroundColor(.white)
