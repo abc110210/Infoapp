@@ -112,17 +112,11 @@ struct GroupsView: View {
                 StatTile(title: "关键词惯犯禁言记录",
                          value: "\(bl.keyword_fuzzy_mute_count ?? 0)",
                          color: .magiPurple, icon: "bell.badge.fill")
-                if let sample = bl.web_blacklist_sample, !sample.isEmpty {
-                    Text("网站骗子库样本")
-                        .font(.caption)
-                        .foregroundColor(.magiGray)
-                    FlowChips(items: Array(sample.prefix(10)))
-                }
             }
         }
     }
 
-    // MARK: - IP 黑名单
+    // MARK: - IP 黑名单（列表 + ip-api.com 运营商）
     private func ipCard(_ ip: IPBlacklistInfo) -> some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
@@ -131,7 +125,9 @@ struct GroupsView: View {
                     .font(.title3.weight(.bold))
                     .foregroundColor(.magiPink)
                 if let ips = ip.ips, !ips.isEmpty {
-                    FlowChips(items: ips.map { "IP \($0)" })
+                    ForEach(ips, id: \.self) { addr in
+                        IpRowView(ip: addr, geoText: ip.geoText(for: addr))
+                    }
                 }
             }
         }
@@ -189,39 +185,33 @@ struct GroupsView: View {
     }
 }
 
-// MARK: - 流式 chips
-struct FlowChips: View {
-    let items: [String]
+// MARK: - IP 黑名单行（运营商由服务端识别并缓存，App 直接展示）
+struct IpRowView: View {
+    let ip: String
+    let geoText: String?
 
     var body: some View {
-        var width: CGFloat = 0
-        var rows: [[String]] = [[]]
-        for item in items {
-            let len = CGFloat(item.count) * 9 + 24
-            if width + len > UIScreen.main.bounds.width - 100 {
-                rows.append([item])
-                width = len
-            } else {
-                rows[rows.count - 1].append(item)
-                width += len + 8
+        HStack(spacing: 10) {
+            Image(systemName: "network.badge.shield.half.filled")
+                .font(.system(size: 14))
+                .foregroundColor(.magiGold)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(ip)
+                    .font(MagiFont.num(13))
+                    .foregroundColor(.white)
+                Text(geoText ?? "运营商未知")
+                    .font(.caption)
+                    .foregroundColor(.magiGray)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
+            Spacer()
         }
-        return VStack(alignment: .leading, spacing: 6) {
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                HStack(spacing: 6) {
-                    ForEach(row, id: \.self) { item in
-                        Text(item)
-                            .font(.caption2.monospaced())
-                            .foregroundColor(.white.opacity(0.85))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.white.opacity(0.08))
-                            )
-                    }
-                }
-            }
-        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(0.05))
+        )
     }
 }

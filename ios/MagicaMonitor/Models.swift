@@ -20,6 +20,7 @@ struct BotInfo: Decodable {
     let blacklist: BlacklistInfo?
     let ipblacklist: IPBlacklistInfo?
     let invites: InvitesInfo?
+    let speech: SpeechInfo?
     let console: ConsoleInfo?
     let system: SystemInfo?
 }
@@ -177,6 +178,13 @@ struct BlacklistInfo: Decodable {
 struct IPBlacklistInfo: Decodable {
     let count: Int?
     let ips: [String]?
+    /// 服务端识别的中文运营商缓存：{ IP: "省份 · 城市 · 运营商" }
+    let geo: [String: String]?
+
+    /// 指定 IP 的中文运营商摘要
+    func geoText(for ip: String) -> String? {
+        geo?[ip]
+    }
 }
 
 // MARK: - 群邀请统计（v3 简化：按群统计人数）
@@ -188,6 +196,37 @@ struct InvitesInfo: Decodable {
         (per_group ?? [:]).sorted { $0.value > $1.value }
             .map { PVRow(name: $0.key, count: $0.value) }
     }
+}
+
+// MARK: - 发言统计（/info/speech v8）
+struct SpeechInfo: Decodable {
+    let total_messages_30d: Int?
+    let groups: [String: SpeechGroup]?
+
+    var sortedGroups: [(String, SpeechGroup)] {
+        (groups ?? [:]).sorted { ($0.1.month30?.messages ?? 0) > ($1.1.month30?.messages ?? 0) }
+    }
+}
+
+struct SpeechGroup: Decodable {
+    let today: SpeechDim?
+    let month30: SpeechDim?
+}
+
+struct SpeechDim: Decodable {
+    let members: Int?
+    let messages: Int?
+    let top: [SpeechTop]?
+
+    var topList: [SpeechTop] { top ?? [] }
+    var topLabel: String {
+        topList.prefix(5).map { "\($0.user_id ?? "?") ×\($0.count ?? 0)" }.joined(separator: "  ")
+    }
+}
+
+struct SpeechTop: Decodable {
+    let user_id: String?
+    let count: Int?
 }
 
 // MARK: - 展示辅助
