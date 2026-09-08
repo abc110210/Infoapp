@@ -1,0 +1,62 @@
+# XcodeGen 配置：生成 HoshinoPlayer.xcodeproj（CI 与本地共用）
+# 依赖安装：brew install xcodegen  →  执行：xcodegen generate
+name: HoshinoPlayer
+options:
+  bundleIdPrefix: com.hoshino
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+targets:
+  HoshinoPlayer:
+    type: application
+    platform: iOS
+    sources:
+      - HoshinoPlayer
+    info:
+      path: HoshinoPlayer/Resources/Info.plist
+      properties:
+        CFBundleDevelopmentRegion: zh_CN
+        CFBundleDisplayName: 星野播放器
+        CFBundleName: $(PRODUCT_NAME)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSRequiresIPhoneOS: true
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        # 后台音频能力（锁屏 / 切后台持续播放）
+        UIBackgroundModes:
+          - audio
+        # 允许播放 http 明文流 / 自建 NAS WebDAV（用户环境常见）
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hoshino.player
+        MARKETING_VERSION: 1.0.0
+        CURRENT_PROJECT_VERSION: 1
+        TARGETED_DEVICE_FAMILY: 1
+        SWIFT_VERSION: 5.7
+        IPHONEOS_DEPLOYMENT_TARGET: 15.0
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+        CODE_SIGN_STYLE: Automatic
+    scheme:
+      testTargets: []
+
+schemes:
+  HoshinoPlayer:
+    build:
+      targets:
+        HoshinoPlayer: all
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release
