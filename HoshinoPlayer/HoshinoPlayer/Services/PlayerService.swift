@@ -174,23 +174,21 @@ final class PlayerService: ObservableObject {
         CacheManager.shared.ensureDownload(track)
         isPlaying = true
         pendingResumeObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
-            guard let self else { return }
-            switch item.status {
-            case .readyToPlay:
-                guard let cur = self.player.currentItem, cur === item, self.isPlaying else { return }
-                Task { @MainActor in
+            Task { @MainActor in
+                guard let self else { return }
+                switch item.status {
+                case .readyToPlay:
+                    guard let cur = self.player.currentItem, cur === item, self.isPlaying else { return }
                     self.configureAudioSession()
                     self.player.play()
                     self.updateNowPlaying()
-                }
-            case .failed:
-                // 资源不可达 / 解码失败：回退为暂停态，避免 UI 假播放
-                Task { @MainActor in
+                case .failed:
+                    // 资源不可达 / 解码失败：回退为暂停态，避免 UI 假播放
                     self.isPlaying = false
                     self.updateNowPlaying()
+                default:
+                    break
                 }
-            default:
-                break
             }
         }
         updateNowPlaying()
@@ -229,13 +227,16 @@ final class PlayerService: ObservableObject {
             forInterval: CMTime(seconds: 0.5, preferredTimescale: 600),
             queue: .main
         ) { [weak self] time in
-            guard let self else { return }
-            let t = CMTimeGetSeconds(time)
-            if t.isFinite, t >= 0 {
-                self.currentTime = t
-                if self.duration <= 1 { self.syncDuration() }
+            // 周期回调不是 MainActor 上下文：切换到主线程再更新 UI 状态
+            Task { @MainActor in
+                guard let self else { return }
+                let t = CMTimeGetSeconds(time)
+                if t.isFinite, t >= 0 {
+                    self.currentTime = t
+                    if self.duration <= 1 { self.syncDuration() }
+                }
+                self.updateLockScreenProgress()
             }
-            self.updateLockScreenProgress()
         }
     }
 
@@ -252,16 +253,20 @@ final class PlayerService: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] note in
-            guard let self,
-                  let ended = note.object as? AVPlayerItem,
-                  ended == self.player.currentItem else { return }
-            switch self.mode {
-            case .single:
-                self.playFromBeginning()
-            case .sequence, .shuffle:
-                self.next(false)
+            // 播完回调节点不保证 MainActor 上下文：切回主线程处理
+            let ended = note.object as? AVPlayerItem
+            Task { @MainActor in
+                guard let self,
+                      let ended,
+                      ended === self.player.currentItem else { return }
+                switch self.mode {
+                case .single:
+                    self.playFromBeginning()
+                case .sequence, .shuffle:
+                    self.next(false)
+                }
+                self.updateNowPlaying()
             }
-            self.updateNowPlaying()
         }
     }
 
@@ -331,7 +336,7 @@ final class PlayerService: ObservableObject {
         let size = CGSize(width: 400, height: 400)
         let renderer = UIGraphicsImageRenderer(size: size)
         let image = renderer.image { ctx in
-            let colors = HoshinoTheme.grad(gradient).colors
+            let colors = HoshinoTheme.gradColors(gradient)
             let cgLayer = CAGradientLayer()
             cgLayer.frame = CGRect(origin: .zero, size: size)
             cgLayer.colors = colors.map { UIColor($0).cgColor }
