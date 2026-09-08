@@ -13,9 +13,8 @@ ROOT = os.path.dirname(HERE)
 SRC = os.path.join(ROOT, "..", "..", "QQ图片20260812161716.png")
 DST = os.path.join(ROOT, "HoshinoPlayer", "Resources", "Assets.xcassets", "AppIcon.appiconset")
 
-# (idiom, size, scale, filename)
+# (idiom, size, scale, filename) —— 注意 20pt@1x 对 iPhone/iPad 均为无效尺寸，不生成
 SPEC = [
-    ("iphone",  "20", "1x", "iphone20-1x.png"),
     ("iphone",  "20", "2x", "iphone20-2x.png"),
     ("iphone",  "20", "3x", "iphone20-3x.png"),
     ("iphone",  "29", "1x", "iphone29-1x.png"),
@@ -26,7 +25,6 @@ SPEC = [
     ("iphone",  "40", "3x", "iphone40-3x.png"),
     ("iphone",  "60", "2x", "iphone60-2x.png"),
     ("iphone",  "60", "3x", "iphone60-3x.png"),
-    ("ipad",    "20", "1x", "ipad20-1x.png"),
     ("ipad",    "20", "2x", "ipad20-2x.png"),
     ("ipad",    "29", "1x", "ipad29-1x.png"),
     ("ipad",    "29", "2x", "ipad29-2x.png"),
