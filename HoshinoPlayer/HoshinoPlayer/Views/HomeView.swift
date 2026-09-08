@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 页面1：我的音乐（问候卡 + 搜索 + 歌单横滑 + 猜你喜欢 + 最近播放）
+/// 页面1：我的音乐（问候卡 + NAS 状态 + 搜索 + 曲库 + 最近播放）
 struct HomeView: View {
     @EnvironmentObject private var library: LibraryService
     @State private var keyword = ""
@@ -17,6 +17,8 @@ struct HomeView: View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 hero
+                nasStatus
+                    .padding(.top, 10)
                 searchBar
                     .padding(.top, 14)
                 sheets
@@ -25,7 +27,7 @@ struct HomeView: View {
                     .padding(.bottom, 10)
                 trackList(filteredTracks, limit: 4)
                 if filteredTracks.isEmpty && !keyword.isEmpty {
-                    // 搜索无结果时不再展示“最近播放”
+                    // 搜索无结果时不再展示"最近播放"
                 } else {
                     SectionTitle(title: "最近播放", trailing: "清空")
                         .padding(.top, 18)
@@ -37,6 +39,55 @@ struct HomeView: View {
             .padding(.top, 18)
             .padding(.bottom, 30)
         }
+    }
+
+    // MARK: NAS 连接状态
+    private var nasStatus: some View {
+        HStack(spacing: 8) {
+            if library.isLoading {
+                ProgressView().tint(HoshinoTheme.deepPink)
+                Text("正在连接 NAS 曲库…")
+                    .font(.system(size: 12))
+                    .foregroundColor(HoshinoTheme.inkSub)
+            } else if let err = library.loadError {
+                Image(systemName: "wifi.exclamationmark")
+                    .foregroundColor(.orange)
+                Text(err)
+                    .font(.system(size: 12))
+                    .foregroundColor(.orange)
+                    .lineLimit(2)
+                Spacer()
+                Button {
+                    Task { await library.loadFromNAS() }
+                } label: {
+                    Text("重试")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(.orange))
+                }
+                .buttonStyle(.plain)
+            } else if library.isNASLoaded {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(HoshinoTheme.mint)
+                Text("已连接 NAS WebDAV · 曲库 \(library.allTracks.count) 首")
+                    .font(.system(size: 12))
+                    .foregroundColor(HoshinoTheme.inkSub)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(.white.opacity(0.85))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(library.isNASLoaded ? HoshinoTheme.mint.opacity(0.5) : Color.orange.opacity(0.4),
+                        lineWidth: 1)
+        )
     }
 
     private var filterText: String {
