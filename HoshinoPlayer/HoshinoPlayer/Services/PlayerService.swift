@@ -153,7 +153,7 @@ final class PlayerService: ObservableObject {
         pendingResumeObservation?.invalidate()
         pendingResumeObservation = nil
 
-        // 1) 本地缓存优先
+        // 1) 本地缓存优先（仅对 http/https 直链的缓存生效；hoshi:// 不会命中）
         if let cached = CacheManager.shared.cachedURL(for: track) {
             player.replaceCurrentItem(with: AVPlayerItem(url: cached))
             configureAudioSession()
@@ -164,14 +164,17 @@ final class PlayerService: ObservableObject {
             return
         }
 
-        // 2) 远程：缓冲完成后由 KVO 自动续播（不提前置 isPlaying=true，避免误判）
+        // 2) 远程：缓冲完成后由 KVO 自动续播
         guard let url = URL(string: track.audioURL) else {
             isPlaying = false
             return
         }
         let item = AVPlayerItem(url: url)
         player.replaceCurrentItem(with: item)
-        CacheManager.shared.ensureDownload(track)
+        // 仅 http/https 直链做整曲缓存；NAS 的 hoshi:// 走流式（音频大，不落盘）
+        if url.scheme == "http" || url.scheme == "https" {
+            CacheManager.shared.ensureDownload(track)
+        }
         isPlaying = true
         pendingResumeObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
             // 先在外层解包 weak self 为不可变局部值，再进入 Sendable Task（避免捕获可变 self）
