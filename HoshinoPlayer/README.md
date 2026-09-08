@@ -80,5 +80,6 @@ Xcode 的免费 Provisioning Profile（7 天有效期）配合 `ios-deploy` 或�
 
 - **AppIcon 已随仓库提交**（全套尺寸生成于 `Assets.xcassets/AppIcon.appiconset`）；`tools/make_icons.py` 仅在需要重新生成时使用（该脚本为本机工具，读取仓库外部的 `QQ图片20260812161716.png`，不随仓库分发）
 - 当前曲库为**内置演示数据**（SoundHelix 公共测试音频 + 示例歌词），替换真实曲库的方式见 `LibraryService.loadFromRemote`（预留 WebDAV / JSON 直链加载口）
+- **歌单图标**：用户自绘 6 款（`饭团/兔兔/鲸鱼/鲨鱼/海星鸭/炸虾`，透明背景手绘卡通风，位于工程根目录 `*.png`），供新建歌单选择；预览稿在 `web/icons/`（dango/rabbit/whale/shark/duck/shrimp.png）
 - 签名最终由你本人完成，仓库不提交任何证书 / 描述文件 / 私钥
 - 缓存 / 设置均持久化在 UserDefaults 与 Caches 目录，清除缓存不丢失设置
