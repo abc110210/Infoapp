@@ -3,7 +3,6 @@ import SwiftUI
 /// 页面4：歌词（封面 + 当前行高亮 + 自动滚动居中）
 struct LyricsView: View {
     @ObservedObject private var player = PlayerService.shared
-    @State private var scrollID: UUID?
 
     private var lines: [LyricLine] {
         LyricsParser.parse(player.currentTrack?.lyric ?? "")
@@ -89,9 +88,9 @@ struct DiscThumb: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 40, style: .continuous)
-                .fill(AngularGradient(colors: [HoshinoTheme.grad(gradient).colors[0], .white,
+                .fill(AngularGradient(colors: [HoshinoTheme.gradColors(gradient)[0], .white,
                                                 HoshinoTheme.softPink, .white, HoshinoTheme.lav,
-                                                HoshinoTheme.grad(gradient).colors[0]],
+                                                HoshinoTheme.gradColors(gradient)[0]],
                                       center: .center))
                 .frame(width: 150, height: 150)
                 .rotationEffect(.degrees(spin ? 360 : 0))
