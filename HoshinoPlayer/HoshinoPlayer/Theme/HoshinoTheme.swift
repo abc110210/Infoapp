@@ -16,23 +16,31 @@ enum HoshinoTheme {
     static let inkSoft  = Color(red: 0.85, green: 0.72, blue: 0.78)  // 弱化
 
     // MARK: - 马卡龙渐变（T-cover / 歌单卡 / 播放封面）
-    static let gradients: [LinearGradient] = [
-        LinearGradient(colors: [Color(red: 1.00, green: 0.73, blue: 0.81),
-                                Color(red: 0.96, green: 0.51, blue: 0.67)],
-                       startPoint: .topLeading, endPoint: .bottomTrailing),
-        LinearGradient(colors: [Color(red: 0.73, green: 0.65, blue: 0.96),
-                                Color(red: 0.56, green: 0.49, blue: 0.88)],
-                       startPoint: .topLeading, endPoint: .bottomTrailing),
-        LinearGradient(colors: [Color(red: 1.00, green: 0.85, blue: 0.63),
-                                Color(red: 0.96, green: 0.73, blue: 0.42)],
-                       startPoint: .topLeading, endPoint: .bottomTrailing),
-        LinearGradient(colors: [Color(red: 0.65, green: 0.88, blue: 0.78),
-                                Color(red: 0.44, green: 0.79, blue: 0.65)],
-                       startPoint: .topLeading, endPoint: .bottomTrailing),
+    /// 颜色对（供 LinearGradient 与 artwork 共用）
+    static let gradientPalette: [[Color]] = [
+        // 渐变 0：暖粉
+        [Color(red: 1.00, green: 0.73, blue: 0.81),
+         Color(red: 0.96, green: 0.51, blue: 0.67)],
+        // 渐变 1：淡紫
+        [Color(red: 0.73, green: 0.65, blue: 0.96),
+         Color(red: 0.56, green: 0.49, blue: 0.88)],
+        // 渐变 2：奶油黄
+        [Color(red: 1.00, green: 0.85, blue: 0.63),
+         Color(red: 0.96, green: 0.73, blue: 0.42)],
+        // 渐变 3：薄荷绿
+        [Color(red: 0.65, green: 0.88, blue: 0.78),
+         Color(red: 0.44, green: 0.79, blue: 0.65)],
     ]
 
+    /// 取第 i 组渐变色（供 AngularGradient / UIImage 渲染取色用）
+    static func gradColors(_ i: Int) -> [Color] {
+        gradientPalette[abs(i) % gradientPalette.count]
+    }
+
+    /// 取第 i 组 LinearGradient（覆盖 View 用）
     static func grad(_ i: Int) -> LinearGradient {
-        gradients[abs(i) % gradients.count]
+        let colors = gradColors(i)
+        return LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 
     // MARK: - 装饰
