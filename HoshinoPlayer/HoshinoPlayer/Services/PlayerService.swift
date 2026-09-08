@@ -174,8 +174,9 @@ final class PlayerService: ObservableObject {
         CacheManager.shared.ensureDownload(track)
         isPlaying = true
         pendingResumeObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
+            // 先在外层解包 weak self 为不可变局部值，再进入 Sendable Task（避免捕获可变 self）
+            guard let self else { return }
             Task { @MainActor in
-                guard let self else { return }
                 switch item.status {
                 case .readyToPlay:
                     guard let cur = self.player.currentItem, cur === item, self.isPlaying else { return }
@@ -211,11 +212,12 @@ final class PlayerService: ObservableObject {
             player.volume = 0
         }
         animator.addCompletion { [weak self] _ in
+            guard let self else { return }
             Task { @MainActor in
-                self?.player.pause()
-                self?.isPlaying = false
-                self?.player.volume = 1
-                self?.updateNowPlaying()
+                self.player.pause()
+                self.isPlaying = false
+                self.player.volume = 1
+                self.updateNowPlaying()
             }
         }
         animator.startAnimation()
@@ -227,10 +229,10 @@ final class PlayerService: ObservableObject {
             forInterval: CMTime(seconds: 0.5, preferredTimescale: 600),
             queue: .main
         ) { [weak self] time in
-            // 周期回调不是 MainActor 上下文：切换到主线程再更新 UI 状态
+            // 先解包 weak self，避免 Sendable Task 捕获可变 self
+            guard let self else { return }
+            let t = CMTimeGetSeconds(time)
             Task { @MainActor in
-                guard let self else { return }
-                let t = CMTimeGetSeconds(time)
                 if t.isFinite, t >= 0 {
                     self.currentTime = t
                     if self.duration <= 1 { self.syncDuration() }
@@ -253,12 +255,11 @@ final class PlayerService: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] note in
-            // 播完回调节点不保证 MainActor 上下文：切回主线程处理
+            // 先解包 weak self，再进入 Sendable Task（避免捕获可变 self）
+            guard let self else { return }
             let ended = note.object as? AVPlayerItem
             Task { @MainActor in
-                guard let self,
-                      let ended,
-                      ended === self.player.currentItem else { return }
+                guard let ended, ended === self.player.currentItem else { return }
                 switch self.mode {
                 case .single:
                     self.playFromBeginning()
