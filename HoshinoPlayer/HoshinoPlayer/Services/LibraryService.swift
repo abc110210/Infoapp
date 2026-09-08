@@ -38,24 +38,14 @@ final class LibraryService: ObservableObject {
                 loadError = "NAS 曲库为空"
                 return
             }
-            // 按艺术家分组生成歌单；全部曲目归入"NAS 曲库"
+            // 默认单个「曲库」歌单（全部歌曲）；用户后续可在歌单页自行新增
             let allPlaylist = Playlist(id: "nas-all",
-                                       name: "NAS 曲库",
-                                       emoji: "🌐",
+                                       name: "曲库",
+                                       emoji: "🎵",
                                        gradient: 0,
-                                       note: "\(tracks.count) 首 · WebDAV 直连",
+                                       note: "全部歌曲 · \(tracks.count) 首",
                                        tracks: tracks)
-            let byArtist = Dictionary(grouping: tracks) { $0.artist }
-                .map { (key, value) in
-                    Playlist(id: "nas-\(key)",
-                             name: key.isEmpty ? "未知艺术家" : key,
-                             emoji: "🎤",
-                             gradient: abs(key.hashValue) % 4,
-                             note: "\(value.count) 首",
-                             tracks: value)
-                }
-                .sorted { $0.name < $1.name }
-            playlists = [allPlaylist] + byArtist
+            playlists = [allPlaylist]
             isNASLoaded = true
         } catch {
             loadError = "无法连接 NAS（\(NASConfig.host):\(NASConfig.port)）\n请确认与 NAS 同一局域网"

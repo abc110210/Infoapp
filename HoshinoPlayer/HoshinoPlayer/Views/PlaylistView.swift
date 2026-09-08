@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 页面2：歌单（2×2 卡片切换 → 下方显示该歌单曲目）
+/// 页面2：歌单（曲库卡 + 音乐列表）
 struct PlaylistView: View {
     @EnvironmentObject private var library: LibraryService
     @State private var selected = 0
@@ -21,7 +21,7 @@ struct PlaylistView: View {
                 head
                 cards
                 if let current {
-                    SectionTitle(title: current.name, trailing: current.note)
+                    SectionTitle(title: "音乐列表", trailing: current.note)
                         .padding(.top, 20)
                         .padding(.bottom, 10)
                     songs(of: current)

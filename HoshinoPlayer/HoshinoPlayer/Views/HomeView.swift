@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 页面1：我的音乐（问候卡 + NAS 状态 + 搜索 + 曲库 + 最近播放）
+/// 页面1：我的音乐（问候卡 + 搜索 + 曲库 + 最近播放）
 struct HomeView: View {
     @EnvironmentObject private var library: LibraryService
     @State private var keyword = ""
@@ -22,7 +22,7 @@ struct HomeView: View {
                 searchBar
                     .padding(.top, 14)
                 sheets
-                SectionTitle(title: "猜你喜欢", trailing: filterText)
+                SectionTitle(title: "曲库", trailing: filterText)
                     .padding(.top, 20)
                     .padding(.bottom, 10)
                 trackList(filteredTracks, limit: 4)
@@ -41,15 +41,11 @@ struct HomeView: View {
         }
     }
 
-    // MARK: NAS 连接状态
+    // MARK: NAS 失败提示（成功连接时不展示；NAS 即曲库，无需强调）
+    @ViewBuilder
     private var nasStatus: some View {
-        HStack(spacing: 8) {
-            if library.isLoading {
-                ProgressView().tint(HoshinoTheme.deepPink)
-                Text("正在连接 NAS 曲库…")
-                    .font(.system(size: 12))
-                    .foregroundColor(HoshinoTheme.inkSub)
-            } else if let err = library.loadError {
+        if let err = library.loadError {
+            HStack(spacing: 8) {
                 Image(systemName: "wifi.exclamationmark")
                     .foregroundColor(.orange)
                 Text(err)
@@ -68,26 +64,18 @@ struct HomeView: View {
                         .background(Capsule().fill(.orange))
                 }
                 .buttonStyle(.plain)
-            } else if library.isNASLoaded {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(HoshinoTheme.mint)
-                Text("已连接 NAS WebDAV · 曲库 \(library.allTracks.count) 首")
-                    .font(.system(size: 12))
-                    .foregroundColor(HoshinoTheme.inkSub)
             }
-            Spacer()
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(.white.opacity(0.85))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+            )
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(.white.opacity(0.85))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(library.isNASLoaded ? HoshinoTheme.mint.opacity(0.5) : Color.orange.opacity(0.4),
-                        lineWidth: 1)
-        )
     }
 
     private var filterText: String {
