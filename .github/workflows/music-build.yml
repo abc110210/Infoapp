@@ -1,6 +1,11 @@
 name: musiciosapp
 
 on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'HoshinoPlayer/**'
+      - '.github/workflows/music-build.yml'
   workflow_dispatch:
 
 concurrency:
