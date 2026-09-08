@@ -1,11 +1,6 @@
-name: Build iOS App (unsigned ipa)
+name: musiciosapp
 
 on:
-  push:
-    branches: [ main, master ]
-    paths:
-      - 'HoshinoPlayer/**'
-      - '.github/workflows/**'
   workflow_dispatch:
 
 concurrency:
