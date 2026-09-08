@@ -18,7 +18,7 @@ final class DAVURLProtocol: URLProtocol, URLSessionDataDelegate {
         return URLSession(configuration: cfg, delegate: sessionDelegate, delegateQueue: nil)
     }()
 
-    private var task: URLSessionDataTask?
+    private var dataTask: URLSessionDataTask?
     private var isCancelled = false
 
     /// URLProtocol 的 client 回调要求主线程，统一派发
@@ -58,14 +58,14 @@ final class DAVURLProtocol: URLProtocol, URLSessionDataDelegate {
         req.timeoutInterval = 60
 
         isCancelled = false
-        task = Self.session.dataTask(with: req)
-        task?.resume()
+        dataTask = Self.session.dataTask(with: req)
+        dataTask?.resume()
     }
 
     override func stopLoading() {
         isCancelled = true
-        task?.cancel()
-        task = nil
+        dataTask?.cancel()
+        dataTask = nil
     }
 
     /// hoshi://nas/音乐/x.flac → https://nas.xlingran.com:5008/音乐/x.flac（中文重新 percent 编码）
@@ -129,7 +129,7 @@ final class DAVURLProtocol: URLProtocol, URLSessionDataDelegate {
                 proto.client?.urlProtocolDidFinishLoading(proto)
             }
         }
-        self.task = nil
+        self.dataTask = nil
     }
 
     private func contentType(for url: URL?) -> String? {
